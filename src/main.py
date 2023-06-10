@@ -16,12 +16,17 @@ MODEL = "EleutherAI/pythia-2.8b-deduped"
 routes = web.RouteTableDef()
 
 # this is more of a chatbot type
+print("Initializing model...")
 model = GPTNeoXForCausalLM.from_pretrained(MODEL,revision="step3000").to(DEVICE)
+print("Initializing tokenizer...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL,revision="step3000")
 
 def _generate(text: str) -> str:
+  print(f"Tokenizing text: {text[:70]}...")
   inputs = tokenizer(text, return_tensors="pt").to(DEVICE)
+  print("Generating...")
   tokens = model.generate(**inputs)
+  print("Decoding...")
   return tokenizer.decode(tokens[0])
 
 async def generate_text(text: str) -> Coroutine[Any, Any, str]:
@@ -36,12 +41,15 @@ async def post_generate(request: Request) -> Response:
   if not data:
     return web.Response(text="no text passed",status=400)
   
+  print(f"Processing request...")
+  
   output = await generate_text(data)
 
-  response = web.Response(body=output,status=200,content_type="audio/x-wav")
+  response = web.Response(body=output,status=200,content_type="text/plain")
   return response
 
 app = web.Application()
 app.add_routes(routes)
 
+print("Starting webserver...")
 web.run_app(app,host="0.0.0.0",port=12503) # type: ignore
